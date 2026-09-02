@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/x-icon" href="img/orimslav_logo_blue_transparent.ico">
+<title>OrimCube Radio — internet radio controlled by rolling a cube</title>
+<meta name="description" content="OrimCube Radio — internet radio you control by rolling a wooden cube. ESP32, gesture control, web setup.">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:#111;display:flex;flex-direction:column;align-items:center;padding:0;font-family:'Segoe UI',sans-serif;color:#ccc;min-height:100vh;}
+
+  /* Top bar */
+  .topbar{width:100%;background:#1e1e2e;border-bottom:1px solid #333;display:flex;align-items:center;justify-content:space-between;padding:10px 24px;}
+  .topbar-logo{display:flex;align-items:center;gap:10px;}
+  .topbar-logo a{display:inline-flex;align-items:center;}
+  .topbar-logo img{height:32px;width:auto;display:block;}
+  .topbar-logo span{font-size:12px;color:#666;font-family:monospace;}
+  .lang-switcher{display:flex;gap:6px;}
+  .lang-btn{background:none;border:1.5px solid #444;border-radius:4px;cursor:pointer;padding:3px 6px;display:flex;align-items:center;gap:5px;font-size:11px;color:#888;transition:border-color 0.15s,color 0.15s;}
+  .lang-btn:hover{border-color:#777;color:#ccc;}
+  .lang-btn.active{border-color:#1D9E75;color:#ccc;}
+  .lang-btn img{width:20px;height:14px;object-fit:cover;border-radius:2px;}
+
+  /* Main content */
+  .main{width:100%;max-width:760px;padding:32px 20px;}
+  .header{text-align:center;margin-bottom:32px;}
+  .header h1{font-size:24px;color:#8fd3ff;font-weight:600;margin-bottom:8px;}
+  .header p{font-size:13px;color:#888;line-height:1.6;}
+  .header .badge{display:inline-block;background:#2a2a3e;border:1px solid #444;border-radius:4px;padding:2px 8px;font-size:11px;color:#aaa;font-family:monospace;margin-top:10px;}
+
+  .card{background:#1e1e2e;border:1.5px solid #555;border-radius:8px;padding:24px;margin-bottom:20px;}
+  .card-title{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid #333;}
+
+  .btn-row{display:flex;gap:12px;flex-wrap:wrap;}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:5px;font-size:13px;font-weight:500;text-decoration:none;border:none;cursor:pointer;transition:opacity 0.15s;}
+  .btn:hover{opacity:0.82;}
+  .btn-primary{background:#2980b9;color:#fff;}
+  .btn-secondary{background:#2a2a3e;border:1px solid #555;color:#ccc;}
+
+  /* Ko-fi support button — amber accent */
+  .kofi-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:5px;font-size:13px;font-weight:600;text-decoration:none;background:#2a1e08;border:1px solid #BA7517;color:#EF9F27;transition:all 0.15s;}
+  .kofi-btn:hover{background:#3a2810;color:#FFB72E;}
+
+  .tag{display:inline-block;background:#252535;border:1px solid #444;border-radius:3px;padding:1px 6px;font-size:10px;color:#aaa;}
+
+  .table{width:100%;border-collapse:collapse;font-size:12px;}
+  .table th{text-align:left;padding:6px 8px;color:#666;font-weight:500;font-size:10px;text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid #333;}
+  .table td{padding:6px 8px;color:#bbb;border-bottom:1px solid #2a2a3e;line-height:1.5;}
+  .table tr:last-child td{border-bottom:none;}
+
+  /* Steps */
+  .steps{counter-reset:step;list-style:none;padding:0;margin:14px 0 0;display:grid;gap:8px;}
+  .steps li{counter-increment:step;position:relative;padding:10px 12px 10px 40px;background:#252535;border:1px solid #333;border-radius:5px;font-size:12.5px;color:#bbb;line-height:1.55;}
+  .steps li::before{content:counter(step);position:absolute;left:10px;top:11px;width:20px;height:20px;background:#0a1e35;color:#85B7EB;border:1px solid #185FA5;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:10px;font-family:monospace;}
+
+  /* Features grid */
+  .feat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;}
+  .feat{background:#252535;border:1px solid #333;border-radius:5px;padding:12px 14px;font-size:12px;line-height:1.55;color:#bbb;}
+  .feat strong{display:block;color:#e0e0e0;font-weight:600;margin-bottom:4px;font-size:12.5px;}
+
+  /* Inline code */
+  p code, td code, li code, .feat code{background:#0a1e35;color:#85B7EB;padding:1px 5px;border-radius:3px;font-family:monospace;font-size:0.9em;border:1px solid #185FA5;}
+  .steps code{background:#0a1e35;color:#85B7EB;padding:1px 5px;border-radius:3px;font-family:monospace;font-size:11px;border:1px solid #185FA5;}
+
+  /* Video */
+  .video-wrap{position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:6px;border:1px solid #333;background:#0a0a0f;}
+  .video-wrap iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:0;}
+
+  /* Screenshots */
+  .screenshot{margin:0;border-radius:6px;overflow:hidden;border:1px solid #333;background:#0a0a0f;}
+  .screenshot img{display:block;width:100%;height:auto;}
+  .shot-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:18px;}
+  .shot-grid .cap{font-size:11px;color:#888;text-align:center;margin-top:8px;line-height:1.45;}
+
+  /* Section subtitle inside cards */
+  .sub{font-size:12px;color:#888;margin-bottom:14px;line-height:1.6;}
+
+  /* Footer */
+  .footer{text-align:center;color:#444;font-size:11px;margin-top:24px;font-family:monospace;}
+  .footer a{color:#555;text-decoration:none;}
+  .footer a:hover{color:#888;}
+  .footer-row{margin-bottom:6px;}
+
+  @media(max-width:520px){
+    .btn-row{flex-direction:column;}
+    .btn{justify-content:center;}
+    .topbar{padding:10px 16px;}
+    .feat-grid{grid-template-columns:1fr;}
+    .shot-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">
+    <a href="https://orimslav.github.io/" target="_blank" rel="noopener">
+      <img src="img/orimslav_logo_blue_transparent.png" alt="Orimslav logo">
+    </a>
+    <span>orimcube_radio</span>
+  </div>
+  <div class="lang-switcher">
+    <button class="lang-btn" id="btn-sk" onclick="setLang('sk')">
+      <img src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20900%20600'%3E%3Crect%20width='900'%20height='200'%20fill='%23fff'/%3E%3Crect%20width='900'%20height='200'%20y='200'%20fill='%230b4ea2'/%3E%3Crect%20width='900'%20height='200'%20y='400'%20fill='%23ee1c25'/%3E%3C/svg%3E" alt="SK"><span>SK</span>
+    </button>
+    <button class="lang-btn" id="btn-en" onclick="setLang('en')">
+      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 30'%3E%3CclipPath id='a'%3E%3Cpath d='M0 0v30h60V0z'/%3E%3C/clipPath%3E%3CclipPath id='b'%3E%3Cpath d='M30 15h30v15zv15H0zH0V0zV0h30z'/%3E%3C/clipPath%3E%3Cg clip-path='url(%23a)'%3E%3Cpath d='M0 0v30h60V0z' fill='%23012169'/%3E%3Cpath d='M0 0l60 30m0-30L0 30' stroke='%23fff' stroke-width='6'/%3E%3Cpath d='M0 0l60 30m0-30L0 30' clip-path='url(%23b)' stroke='%23C8102E' stroke-width='4'/%3E%3Cpath d='M30 0v30M0 15h60' stroke='%23fff' stroke-width='10'/%3E%3Cpath d='M30 0v30M0 15h60' stroke='%23C8102E' stroke-width='6'/%3E%3C/g%3E%3C/svg%3E" alt="EN"><span>EN</span>
+    </button>
+    <button class="lang-btn" id="btn-ru" onclick="setLang('ru')">
+      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 900 600'%3E%3Crect width='900' height='600' fill='%23fff'/%3E%3Crect width='900' height='400' y='200' fill='%230039a6'/%3E%3Crect width='900' height='200' y='400' fill='%23d52b1e'/%3E%3C/svg%3E" alt="RU"><span>RU</span>
+    </button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>&#128266; OrimCube Radio</h1>
+    <p data-sk="Internetové rádio ovládané gúľaním drevenej kocky — bez tlačidiel, bez displeja."
+       data-en="Internet radio you control by rolling a wooden cube — no buttons, no screen."
+       data-ru="Интернет-радио, управляемое вращением деревянного куба — без кнопок и дисплея.">
+      Internetové rádio ovládané gúľaním drevenej kocky — bez tlačidiel, bez displeja.
+    </p>
+  </div>
+
+  <!-- Video -->
+  <div class="card">
+    <div class="card-title" data-sk="Video" data-en="Video" data-ru="Видео">Video</div>
+    <p class="sub"
+       data-sk="Pozri, ako OrimCube Radio funguje v praxi."
+       data-en="See OrimCube Radio in action."
+       data-ru="Посмотрите, как OrimCube Radio работает на практике.">
+      Pozri, ako OrimCube Radio funguje v praxi.
+    </p>
+    <div class="video-wrap">
+      <iframe src="https://www.youtube-nocookie.com/embed/-9TtT4ZY7Ko?rel=0"
+              title="OrimCube Radio"
+              referrerpolicy="strict-origin-when-cross-origin"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowfullscreen></iframe>
+    </div>
+  </div>
+
+  <!-- What it is -->
+  <div class="card">
+    <div class="card-title" data-sk="Čo to je" data-en="What it is" data-ru="Что это">Čo to je</div>
+    <div class="feat-grid">
+
+      <div class="feat">
+        <strong data-sk="Ovládanie gestami" data-en="Gesture control" data-ru="Управление жестами">Ovládanie gestami</strong>
+        <span data-sk="Polož kocku stenou hore = stanica. Nakloň = hlasitosť. Postav na bok = stlmenie."
+              data-en="Face up = station. Tilt = volume. Stand it on a side = mute."
+              data-ru="Грань вверх = станция. Наклон = громкость. Поставить на бок = без звука.">
+          Polož kocku stenou hore = stanica. Nakloň = hlasitosť. Postav na bok = stlmenie.
+        </span>
+      </div>
+
+      <div class="feat">
+        <strong data-sk="Jednoduché pre každého" data-en="Simple for anyone" data-ru="Просто для всех">Jednoduché pre každého</strong>
+        <span data-sk="Žiadne menu ani tlačidlá. Navrhnuté pre seniorov aj deti."
+              data-en="No menus, no buttons. Designed for seniors and kids alike."
+              data-ru="Без меню и кнопок. Создано для пожилых людей и детей.">
+          Žiadne menu ani tlačidlá. Navrhnuté pre seniorov aj deti.
+        </span>
+      </div>
+
+      <div class="feat">
+        <strong data-sk="Sledovanie teploty" data-en="Temperature monitoring" data-ru="Контроль температуры">Sledovanie teploty</strong>
+        <span data-sk="Zabudovaný senzor sleduje teplotu vnútri drevenej skrinky."
+              data-en="A built-in sensor watches the temperature inside the wooden case."
+              data-ru="Встроенный датчик следит за температурой внутри деревянного корпуса.">
+          Zabudovaný senzor sleduje teplotu vnútri drevenej skrinky.
+        </span>
+      </div>
+
+      <div class="feat">
+        <strong data-sk="Viac rádií naraz" data-en="Multiple radios" data-ru="Несколько радио">Viac rádií naraz</strong>
+        <span data-sk="Každé rádio má vlastný názov (.local) — koľko chceš v jednej sieti."
+              data-en="Each radio gets its own name (.local) — run as many as you like on one network."
+              data-ru="У каждого радио своё имя (.local) — сколько угодно в одной сети.">
+          Každé rádio má vlastný názov (.local) — koľko chceš v jednej sieti.
+        </span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Setup guide -->
+  <div class="card">
+    <div class="card-title" data-sk="Návod na nastavenie" data-en="Setup guide" data-ru="Инструкция по настройке">Návod na nastavenie</div>
+    <p class="sub"
+       data-sk="Prvé spustenie zaberie pár minút. Stačí ísť podľa krokov."
+       data-en="First-time setup takes a few minutes. Just follow the steps."
+       data-ru="Первая настройка займёт несколько минут. Просто следуйте шагам.">
+      Prvé spustenie zaberie pár minút. Stačí ísť podľa krokov.
+    </p>
+
+    <ol class="steps">
+      <li data-sk="Zapoj rádio do napájania. Pri prvom zapnutí vytvorí vlastnú WiFi sieť <code>OrimCube</code>."
+          data-en="Plug the radio into power. On first start it creates its own WiFi network <code>OrimCube</code>."
+          data-ru="Подключите радио к питанию. При первом включении оно создаёт свою сеть Wi-Fi <code>OrimCube</code>.">
+        Zapoj rádio do napájania. Pri prvom zapnutí vytvorí vlastnú WiFi sieť <code>OrimCube</code>.
+      </li>
+      <li data-sk="Na telefóne sa pripoj na sieť <code>OrimCube</code>. Otvorí sa prihlasovacie okno (alebo zadaj <code>192.168.4.1</code>)."
+          data-en="On your phone, connect to the <code>OrimCube</code> network. A sign-in page opens (or go to <code>192.168.4.1</code>)."
+          data-ru="На телефоне подключитесь к сети <code>OrimCube</code>. Откроется страница входа (или перейдите на <code>192.168.4.1</code>).">
+        Na telefóne sa pripoj na sieť <code>OrimCube</code>. Otvorí sa prihlasovacie okno (alebo zadaj <code>192.168.4.1</code>).
+      </li>
+      <li data-sk="Ťukni na <strong>Configure WiFi</strong>, vyber svoju domácu sieť, zadaj heslo a ulož. Rádio sa reštartuje a pripojí."
+          data-en="Tap <strong>Configure WiFi</strong>, pick your home network, enter the password and save. The radio restarts and connects."
+          data-ru="Нажмите <strong>Configure WiFi</strong>, выберите домашнюю сеть, введите пароль и сохраните. Радио перезапустится и подключится.">
+        Ťukni na <strong>Configure WiFi</strong>, vyber svoju domácu sieť, zadaj heslo a ulož. Rádio sa reštartuje a pripojí.
+      </li>
+      <li data-sk="Na tom istom WiFi otvor v prehliadači <code>http://orimcube.local</code> — otvorí sa ovládací panel."
+          data-en="On the same WiFi, open <code>http://orimcube.local</code> in a browser — the control panel opens."
+          data-ru="В той же сети Wi-Fi откройте в браузере <code>http://orimcube.local</code> — откроется панель управления.">
+        Na tom istom WiFi otvor v prehliadači <code>http://orimcube.local</code> — otvorí sa ovládací panel.
+      </li>
+      <li data-sk="Pre každú zo 4 stien nastav názov stanice a jej stream URL. Ulož."
+          data-en="For each of the 4 faces, set a station name and its stream URL. Save."
+          data-ru="Для каждой из 4 граней задайте название станции и её URL-поток. Сохраните.">
+        Pre každú zo 4 stien nastav názov stanice a jej stream URL. Ulož.
+      </li>
+      <li data-sk="Ovládaj kocku: stena hore = výber stanice, mierny náklon = hlasitosť, postavenie na bok = stlmenie."
+          data-en="Control the cube: face up = choose station, gentle tilt = volume, stand on a side = mute."
+          data-ru="Управляйте кубом: грань вверх = выбор станции, лёгкий наклон = громкость, поставить на бок = без звука.">
+        Ovládaj kocku: stena hore = výber stanice, mierny náklon = hlasitosť, postavenie na bok = stlmenie.
+      </li>
+      <li data-sk="Máš viac rádií? V sekcii <strong>Sieť</strong> zmeň názov (napr. <code>kuchyna</code>) — rádio sa reštartuje a bude na <code>kuchyna.local</code>."
+          data-en="Have several radios? In the <strong>Network</strong> section change the name (e.g. <code>kitchen</code>) — the radio restarts and lives at <code>kitchen.local</code>."
+          data-ru="Несколько радио? В разделе <strong>Сеть</strong> измените имя (напр. <code>kitchen</code>) — радио перезапустится и будет доступно на <code>kitchen.local</code>.">
+        Máš viac rádií? V sekcii <strong>Sieť</strong> zmeň názov (napr. <code>kuchyna</code>) — rádio sa reštartuje a bude na <code>kuchyna.local</code>.
+      </li>
+      <li data-sk="Zmena WiFi: tlačidlo <strong>Zmeniť WiFi sieť</strong>. Úplný reset WiFi: pri zapínaní podrž tlačidlo BOOT."
+          data-en="Change WiFi: the <strong>Change WiFi network</strong> button. Full WiFi reset: hold the BOOT button while powering on."
+          data-ru="Смена Wi-Fi: кнопка <strong>Change WiFi network</strong>. Полный сброс Wi-Fi: удерживайте кнопку BOOT при включении.">
+        Zmena WiFi: tlačidlo <strong>Zmeniť WiFi sieť</strong>. Úplný reset WiFi: pri zapínaní podrž tlačidlo BOOT.
+      </li>
+    </ol>
+
+    <div class="shot-grid">
+      <div>
+        <div class="screenshot"><img src="img/setup_menu.png" alt="OrimCube WiFiManager" loading="lazy"></div>
+        <div class="cap" data-sk="Prihlasovacie okno OrimCube (WiFiManager)" data-en="OrimCube sign-in (WiFiManager)" data-ru="Окно входа OrimCube (WiFiManager)">Prihlasovacie okno OrimCube (WiFiManager)</div>
+      </div>
+      <div>
+        <div class="screenshot"><img src="img/setup_wifi.png" alt="Configure WiFi" loading="lazy"></div>
+        <div class="cap" data-sk="Výber siete a heslo" data-en="Pick network and password" data-ru="Выбор сети и пароль">Výber siete a heslo</div>
+      </div>
+      <div>
+        <div class="screenshot"><img src="img/setup_web.png" alt="OrimCube web panel" loading="lazy"></div>
+        <div class="cap" data-sk="Ovládací panel v prehliadači" data-en="Browser control panel" data-ru="Панель управления в браузере">Ovládací panel v prehliadači</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cube controls -->
+  <div class="card">
+    <div class="card-title" data-sk="Ovládanie kockou" data-en="Cube controls" data-ru="Управление кубом">Ovládanie kockou</div>
+    <table class="table">
+      <thead>
+        <tr>
+          <th data-sk="Gesto" data-en="Gesture" data-ru="Жест">Gesto</th>
+          <th data-sk="Akcia" data-en="Action" data-ru="Действие">Akcia</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td data-sk="Stena hore" data-en="Face up" data-ru="Грань вверх">Stena hore</td>
+          <td data-sk="Výber stanice 1–4" data-en="Select station 1–4" data-ru="Выбор станции 1–4">Výber stanice 1–4</td>
+        </tr>
+        <tr>
+          <td data-sk="Mierny náklon dopredu / dozadu" data-en="Gentle tilt forward / back" data-ru="Лёгкий наклон вперёд / назад">Mierny náklon dopredu / dozadu</td>
+          <td data-sk="Hlasitosť + / −" data-en="Volume + / −" data-ru="Громкость + / −">Hlasitosť + / −</td>
+        </tr>
+        <tr>
+          <td data-sk="Postavenie na bočnú stenu" data-en="Stand on a side face" data-ru="Поставить на боковую грань">Postavenie na bočnú stenu</td>
+          <td data-sk="Stlmenie zvuku (mute)" data-en="Mute" data-ru="Без звука (mute)">Stlmenie zvuku (mute)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Troubleshooting -->
+  <div class="card">
+    <div class="card-title" data-sk="Riešenie problémov" data-en="Troubleshooting" data-ru="Устранение неполадок">Riešenie problémov</div>
+    <table class="table">
+      <thead>
+        <tr>
+          <th data-sk="Problém" data-en="Problem" data-ru="Проблема">Problém</th>
+          <th data-sk="Riešenie" data-en="Fix" data-ru="Решение">Riešenie</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>orimcube.local</code> <span data-sk="sa neotvára" data-en="won't open" data-ru="не открывается">sa neotvára</span></td>
+          <td data-sk="Použi IP adresu rádia — nájdeš ju v zozname zariadení svojho routera."
+              data-en="Use the radio's IP address — find it in your router's device list."
+              data-ru="Используйте IP-адрес радио — найдите его в списке устройств роутера.">
+            Použi IP adresu rádia — nájdeš ju v zozname zariadení svojho routera.
+          </td>
+        </tr>
+        <tr>
+          <td data-sk="Stanica nehrá" data-en="A station won't play" data-ru="Станция не воспроизводится">Stanica nehrá</td>
+          <td data-sk="Skontroluj stream URL — musí to byť priama adresa streamu (napr. <code>.mp3</code> / <code>.aac</code>)."
+              data-en="Check the stream URL — it must be a direct stream address (e.g. <code>.mp3</code> / <code>.aac</code>)."
+              data-ru="Проверьте URL потока — это должен быть прямой адрес потока (напр. <code>.mp3</code> / <code>.aac</code>).">
+            Skontroluj stream URL — musí to byť priama adresa streamu (napr. <code>.mp3</code> / <code>.aac</code>).
+          </td>
+        </tr>
+        <tr>
+          <td data-sk="Po premenovaní rádio nereaguje" data-en="Radio unresponsive after rename" data-ru="Радио не отвечает после переименования">Po premenovaní rádio nereaguje</td>
+          <td data-sk="Chvíľu počkaj — po zmene názvu sa reštartuje. Potom použi nový <code>.local</code> názov."
+              data-en="Wait a moment — it restarts after a rename. Then use the new <code>.local</code> name."
+              data-ru="Подождите немного — после переименования оно перезапускается. Затем используйте новое имя <code>.local</code>.">
+            Chvíľu počkaj — po zmene názvu sa reštartuje. Potom použi nový <code>.local</code> názov.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Contact / CTA -->
+  <div class="card">
+    <div class="card-title" data-sk="Máte záujem?" data-en="Interested?" data-ru="Интересно?">Máte záujem?</div>
+    <p class="sub"
+       data-sk="OrimCube Radio je autorský projekt Orimslav. Napíšte mi cez hlavnú stránku — rád poradím alebo postavím kus na mieru."
+       data-en="OrimCube Radio is an Orimslav project. Get in touch via the main site — happy to help or build one to order."
+       data-ru="OrimCube Radio — авторский проект Orimslav. Свяжитесь со мной через главный сайт — с радостью помогу или соберу под заказ.">
+      OrimCube Radio je autorský projekt Orimslav. Napíšte mi cez hlavnú stránku — rád poradím alebo postavím kus na mieru.
+    </p>
+    <div class="btn-row">
+      <a class="btn btn-primary" href="https://orimslav.github.io/#contact" target="_blank" rel="noopener">
+        <span data-sk="Kontakt" data-en="Contact" data-ru="Контакт">Kontakt</span>
+      </a>
+      <a class="btn btn-secondary" href="https://orimslav.github.io/" target="_blank" rel="noopener">
+        <span data-sk="Ďalšie projekty" data-en="More projects" data-ru="Другие проекты">Ďalšie projekty</span>
+      </a>
+      <a class="kofi-btn" href="https://ko-fi.com/orimslav" target="_blank" rel="noopener">
+        <span style="font-size:1.1em;">&#9749;</span>
+        <span data-sk="Podporiť na Ko-fi" data-en="Support on Ko-fi" data-ru="Поддержать на Ko-fi">Podporiť na Ko-fi</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-row">
+      <a href="https://orimslav.github.io/" target="_blank">orimslav.github.io</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/Orimslav" target="_blank">Orimslav on GitHub</a>
+      &nbsp;·&nbsp;
+      <a href="https://www.linkedin.com/in/miroslav-hrbka-103857210" target="_blank">LinkedIn</a>
+    </div>
+    <div data-sk="Vytvorené s ❤️ — Orimslav" data-en="Made with ❤️ by Orimslav" data-ru="Сделано с ❤️ — Orimslav">
+      Vytvorené s ❤️ — Orimslav
+    </div>
+  </div>
+</div>
+
+<script>
+function setLang(lang){
+  localStorage.setItem('lang',lang);
+  document.documentElement.lang=lang;
+  document.querySelectorAll('[data-sk]').forEach(el=>{
+    const val=el.getAttribute('data-'+lang);
+    if(val!==null) el.innerHTML=val;
+  });
+  ['sk','en','ru'].forEach(l=>{
+    const b=document.getElementById('btn-'+l);
+    if(b) b.classList.toggle('active',lang===l);
+  });
+}
+setLang(localStorage.getItem('lang')||'sk');
+</script>
+</body>
+</html>
